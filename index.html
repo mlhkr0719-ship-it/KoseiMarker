@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="seqline">
+      <span class="lbl">シーケンス</span>
+      <span id="seqName" class="seq">—</span>
+      <button id="seqRefresh" class="mini">↻</button>
+    </div>
+
+    <label class="fld">フレームレート
+      <select id="fps">
+        <option value="auto" selected>自動（シーケンスから取得）</option>
+        <option value="2997df">29.97 ドロップフレーム</option>
+        <option value="2997nd">29.97 ノンドロップ</option>
+        <option value="5994df">59.94 ドロップフレーム</option>
+        <option value="30">30 (ノンドロップ)</option>
+        <option value="25">25</option>
+        <option value="24">24</option>
+        <option value="23976">23.976</option>
+      </select>
+    </label>
+
+    <label class="fld">全体微調整（フレーム・マイナスで前へ）
+      <input id="offset" type="number" value="0" step="1">
+    </label>
+
+    <div class="datahead">
+      <span>貼り付けデータ（タブ区切り：タイムコード / 現在 / 修正案）</span>
+      <button id="dataClear" class="mini">クリア</button>
+    </div>
+    <textarea id="data" placeholder="00;00;05;10	これから向かう現場は	これから向かう現場は？&#10;00;00;26;20	5段または1m以上	5段以上、または1m以上"></textarea>
+
+    <div class="opts">
+      <label><input type="checkbox" id="clearFirst"> 既存の校正マーカーを先に削除</label>
+    </div>
+
+    <button id="runBtn" class="primary">マーカーを追加</button>
+    <button id="resetBtn" class="danger">校正マーカーを全削除（リセット）</button>
+    <div id="result" class="result"></div>
+
+    <div class="listhead">
+      <span>マーカー一覧（クリックで移動）</span>
+      <button id="listRefresh" class="mini">更新</button>
+    </div>
+    <div class="filterbar">
+      <button class="filt active" data-filter="all">全部</button>
+      <button class="filt" data-filter="kosei">校正</button>
+      <button class="filt" data-filter="other">その他</button>
+    </div>
+    <div id="markerList" class="mlist"></div>
+
+    <div class="loghead">
+      <span>ログ</span>
+      <button id="logClear" class="mini">クリア</button>
+    </div>
+    <pre id="log" class="log"></pre>
+  </div>
+
+  <script src="js/CSInterface.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
