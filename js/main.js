@@ -259,6 +259,23 @@
                 }
             }
 
+            // 1行完結（箇条書き/矢印）形式:  * 00;06;46;22 現在テキスト → 修正テキスト
+            var body = t.replace(/^[\s*・•\-–—]+/, ''); // 先頭の箇条書き記号を除去
+            var mInline = body.match(/^(\d{1,2}(?:[;:]\d{1,2}){1,3})\s+(.+)$/);
+            if (mInline) {
+                var itc = normalizeTC(mInline[1]);
+                if (itc) {
+                    var rest = mInline[2].trim();
+                    var arrow = rest.split(/\s*(?:→|->|⇒|⟶)\s*/);
+                    var f2 = (arrow.length >= 2)
+                        ? [arrow[0].trim(), arrow.slice(1).join(' ').trim()]
+                        : [rest];
+                    records.push({ tc: itc, fields: f2 });
+                    cur = null;
+                    continue;
+                }
+            }
+
             // 縦並び：TC行 → 新レコード開始
             var ntc = normalizeTC(t);
             if (ntc) {
