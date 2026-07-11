@@ -8,6 +8,7 @@
     var dataEl = document.getElementById('data');
     var dataClear = document.getElementById('dataClear');
     var offsetEl = document.getElementById('offset');
+    var colorEl = document.getElementById('color');
     var clearEl = document.getElementById('clearFirst');
     var runBtn = document.getElementById('runBtn');
     var resetBtn = document.getElementById('resetBtn');
@@ -357,8 +358,9 @@
         var payload = parts.join(F2)
             .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
             .replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+        var color = parseInt(colorEl.value, 10) || 0;
         var doAdd = function () {
-            evalHost("addMarkers('" + payload + "')", function (res) {
+            evalHost("addMarkers('" + payload + "'," + color + ")", function (res) {
                 log('addMarkers → ' + res);
                 var d = {};
                 try { d = JSON.parse(res); } catch (e) { showErr('マーカー追加: 応答パース失敗\n' + res); return; }

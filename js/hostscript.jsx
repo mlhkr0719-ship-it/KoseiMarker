@@ -73,12 +73,14 @@ function clearKoseiMarkers() {
 
 // payload: レコードを CharCode(2) 区切、各フィールドを CharCode(1) 区切 = frame / name / comment
 // フレーム番号 × シーケンスの timebase(ticks/frame) で正確な位置を計算する
-function addMarkers(payload) {
+function addMarkers(payload, colorIndex) {
     var seq = app.project.activeSequence;
     if (!seq) { return '{"error":"アクティブなシーケンスがありません"}'; }
     var TICKS = 254016000000;
     var tpf = parseFloat(seq.timebase); // ticks per frame
     if (!(tpf > 0)) { return '{"error":"timebase取得失敗: ' + seq.timebase + '"}'; }
+    var ci = parseInt(colorIndex, 10);
+    if (isNaN(ci)) { ci = 0; }
     var recs = payload.split(String.fromCharCode(2));
     var added = 0;
     var maxDiff = 0; // 要求フレームと実際に刺さった位置の最大差（フレーム）
@@ -90,6 +92,7 @@ function addMarkers(payload) {
         var mk = seq.markers.createMarker(sec);
         mk.name = f[1];
         mk.comments = f[2];
+        try { mk.setColorByIndex(ci); } catch (e) {}
         added++;
         try {
             var actualTicks = parseFloat(mk.start.ticks);
