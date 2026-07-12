@@ -235,6 +235,21 @@
         return z(hh) + ';' + z(mm) + ';' + z(ss) + ';' + z(ff);
     }
 
+    // 行/セルの先頭が TC で始まるか
+    function lineStartsWithTC(s) {
+        return /^\s*\d{1,2}(?:[;:]\d{1,2}){1,3}/.test(s);
+    }
+    // 文字列中の全 TC を正規化して抽出（"TC / TC" のような複数位置に対応）
+    function extractAllTCs(s) {
+        var out = [], re = /\d{1,2}(?:[;:]\d{1,2}){1,3}/g, m;
+        while ((m = re.exec(s))) { var n = normalizeTC(m[0]); if (n) { out.push(n); } }
+        return out;
+    }
+    // 文字列が TC と区切り記号だけで構成されているか（"00;11;00;23 / 00;11;22;09" 等）
+    function isOnlyTCs(s) {
+        return s.replace(/\d{1,2}(?:[;:]\d{1,2}){1,3}/g, '').replace(/[\s/／、,，・|｜]+/g, '') === '';
+    }
+
     // 縦並び（1セル1行）・タブ区切りの両対応。TC行を起点にレコード化。
     function parse(conf) {
         var lines = dataEl.value.split(/\r?\n/);
@@ -245,19 +260,30 @@
             var raw = lines[i];
             var t = raw.trim();
             if (!t) { continue; }
-            if (t.indexOf('タイムコード') !== -1) { continue; } // ヘッダ行
+            if (t.indexOf('タイムコード') !== -1 || t.indexOf('位置(TC') !== -1 || t.indexOf('位置（TC') !== -1) { continue; } // ヘッダ行
 
-            // タブ区切りの1行完結レコード
+            // タブ区切りの1行完結レコード（先頭の番号列・末尾の分類列があってもTC列を探す）
             if (raw.indexOf('\t') !== -1) {
                 var cols = raw.split('\t');
-                var tc0 = normalizeTC(cols[0] || '');
-                if (tc0) {
-                    var f = [];
-                    for (var c = 1; c < cols.length; c++) { if (cols[c].trim()) { f.push(cols[c].trim()); } }
-                    records.push({ tc: tc0, fields: f });
-                    cur = null;
-                    continue;
+                var tcIdx = -1;
+                for (var c = 0; c < cols.length; c++) { if (lineStartsWithTC(cols[c])) { tcIdx = c; break; } }
+                if (tcIdx !== -1) {
+                    var tcs = extractAllTCs(cols[tcIdx]);
+                    if (tcs.length) {
+                        var f = [];
+                        for (var c2 = tcIdx + 1; c2 < cols.length; c2++) { if (cols[c2].trim()) { f.push(cols[c2].trim()); } }
+                        records.push({ tcs: tcs, fields: f });
+                        cur = null;
+                        continue;
+                    }
                 }
+            }
+
+            // 位置行（TCのみ。"TC / TC" のように複数位置も可）→ 縦並びレコード開始
+            if (lineStartsWithTC(t) && isOnlyTCs(t)) {
+                cur = { tcs: extractAllTCs(t), fields: [] };
+                records.push(cur);
+                continue;
             }
 
             // 1行完結（箇条書き/矢印）形式:  * 00;06;46;22 現在テキスト → 修正テキスト
@@ -271,18 +297,10 @@
                     var f2 = (arrow.length >= 2)
                         ? [arrow[0].trim(), arrow.slice(1).join(' ').trim()]
                         : [rest];
-                    records.push({ tc: itc, fields: f2 });
+                    records.push({ tcs: [itc], fields: f2 });
                     cur = null;
                     continue;
                 }
-            }
-
-            // 縦並び：TC行 → 新レコード開始
-            var ntc = normalizeTC(t);
-            if (ntc) {
-                cur = { tc: ntc, fields: [] };
-                records.push(cur);
-                continue;
             }
             // TC以外の行 → 直近レコードのフィールドに追加
             if (cur) {
@@ -293,20 +311,24 @@
         }
 
         var out = [];
+        // zeroPoint(開始TC)もフレームに換算して整数で引く（秒経由の誤差をなくす）
+        var zeroFrames = Math.round((conf.offset || 0) * conf.fps);
         for (var r = 0; r < records.length; r++) {
             var rec = records[r];
             var curText = '', fixText = '';
-            if (rec.fields.length >= 2) { curText = rec.fields[0]; fixText = rec.fields.slice(1).join(' '); }
+            // fields[0]=該当/現在、fields[1]=修正案。以降（分類・番号など）は無視
+            if (rec.fields.length >= 2) { curText = rec.fields[0]; fixText = rec.fields[1]; }
             else if (rec.fields.length === 1) { fixText = rec.fields[0]; }
-            else { errs.push(rec.tc + ': 本文なし（スキップ）'); continue; }
+            else { errs.push((rec.tcs[0] || '?') + ': 本文なし（スキップ）'); continue; }
 
-            // zeroPoint(開始TC)もフレームに換算して整数で引く（秒経由の誤差をなくす）
-            var zeroFrames = Math.round((conf.offset || 0) * conf.fps);
-            var frame = tcToFrame(rec.tc, conf) + (conf.offsetFrames || 0) - zeroFrames;
-            if (frame < 0) { frame = 0; }
             var comment = (curText ? '現在：' + curText + '\n' : '') + '修正：' + fixText;
-            out.push({ frame: frame, name: '校正 ' + rec.tc, comment: comment });
-            log(rec.tc + ' → frame ' + frame + '  修正:' + fixText);
+            for (var ti = 0; ti < rec.tcs.length; ti++) {
+                var tc = rec.tcs[ti];
+                var frame = tcToFrame(tc, conf) + (conf.offsetFrames || 0) - zeroFrames;
+                if (frame < 0) { frame = 0; }
+                out.push({ frame: frame, name: '校正 ' + tc, comment: comment });
+                log(tc + ' → frame ' + frame + '  修正:' + fixText);
+            }
         }
         return { list: out, errs: errs };
     }
