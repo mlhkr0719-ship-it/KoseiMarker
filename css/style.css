@@ -68,11 +68,15 @@ textarea {
   border: 1px solid #444; border-radius: 3px; background: #232323;
 }
 .mlist .empty { padding: 8px; color: #777; }
-.mitem { padding: 6px 8px; border-bottom: 1px solid #383838; cursor: pointer; }
+.mitem { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #383838; }
 .mitem:last-child { border-bottom: none; }
 .mitem:hover { background: #2f3b46; }
+.mitem .mchk { margin: 2px 0 0 0; flex: none; cursor: pointer; }
+.mitem .mcontent { flex: 1; cursor: pointer; min-width: 0; }
 .mitem .mname { color: #7fb3e0; font-size: 10px; }
 .mitem .mcmt { color: #d8d8d8; font-size: 11px; white-space: pre-wrap; margin-top: 2px; }
+.mitem.done { opacity: 0.5; }
+.mitem.done .mcmt { text-decoration: line-through; }
 
 .loghead { display: flex; align-items: center; justify-content: space-between; color: #888; margin-top: 4px; }
 .loghead .mini { width: auto; padding: 0 8px; }

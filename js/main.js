@@ -126,7 +126,8 @@
                 var name = f[1] || '';
                 allMarkers.push({
                     ticks: f[0], name: name, cmt: f[2] || '', secs: parseFloat(f[3]),
-                    kosei: name.indexOf('校正') === 0
+                    kosei: name.indexOf('校正') === 0,
+                    done: /✓/.test(name)
                 });
             }
         }
@@ -143,24 +144,49 @@
             shown++;
 
             var row = document.createElement('div');
-            row.className = 'mitem';
+            row.className = 'mitem' + (mk.done ? ' done' : '');
+
+            // 完了チェックボックス
+            var chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.className = 'mchk';
+            chk.checked = mk.done;
+            row.appendChild(chk);
+
+            var content = document.createElement('div');
+            content.className = 'mcontent';
 
             var nm = document.createElement('div');
             nm.className = 'mname';
-            nm.textContent = fmtTime(mk.secs) + (mk.name ? '  ' + mk.name : '');
-            row.appendChild(nm);
+            var dispName = (mk.name || '').replace(/\s*✓\s*$/, '');
+            nm.textContent = fmtTime(mk.secs) + (dispName ? '  ' + dispName : '');
+            content.appendChild(nm);
 
             var cm = document.createElement('div');
             cm.className = 'mcmt';
             cm.textContent = mk.cmt || '（コメントなし）';
             if (!mk.cmt) { cm.style.color = '#777'; }
-            row.appendChild(cm);
+            content.appendChild(cm);
 
-            (function (tk) {
-                row.addEventListener('click', function () {
+            row.appendChild(content);
+
+            (function (tk, mkRef, rowRef, chkRef) {
+                // 本文クリック＝その位置へ移動
+                content.addEventListener('click', function () {
                     evalHost("gotoMarker('" + tk + "')", function () {});
                 });
-            })(mk.ticks);
+                // チェック＝完了トグル（移動はさせない）
+                chk.addEventListener('click', function (e) { e.stopPropagation(); });
+                chk.addEventListener('change', function () {
+                    var d = chk.checked;
+                    evalHost("setMarkerDone('" + tk + "'," + (d ? 1 : 0) + ")", function (res) {
+                        log('setMarkerDone → ' + res);
+                        mkRef.done = d;
+                        mkRef.name = mkRef.name.replace(/\s*✓\s*$/, '') + (d ? ' ✓' : '');
+                        rowRef.className = 'mitem' + (d ? ' done' : '');
+                    });
+                });
+            })(mk.ticks, mk, row, chk);
             markerListEl.appendChild(row);
         }
         if (shown === 0) {

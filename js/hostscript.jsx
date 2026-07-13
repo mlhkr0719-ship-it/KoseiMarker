@@ -46,6 +46,25 @@ function listMarkers() {
     return out; // 空文字 = マーカー無し
 }
 
+// 指定 ticks のマーカーの完了状態を切り替え（名前末尾の ✓ で表現）
+function setMarkerDone(ticks, done) {
+    var seq = app.project.activeSequence;
+    if (!seq) { return '{"error":"アクティブなシーケンスがありません"}'; }
+    var target = String(ticks);
+    var m = seq.markers.getFirstMarker();
+    while (m) {
+        var mt = "0";
+        try { mt = String(m.start.ticks); } catch (e) {}
+        if (mt === target) {
+            var nm = (m.name || "").replace(/\s*✓\s*$/, "");
+            m.name = (done === "1" || done === 1 || done === true) ? (nm + " ✓") : nm;
+            return '{"ok":1}';
+        }
+        m = seq.markers.getNextMarker(m);
+    }
+    return '{"error":"該当マーカーが見つかりません"}';
+}
+
 // 再生ヘッドを指定 ticks へ移動
 function gotoMarker(ticks) {
     var seq = app.project.activeSequence;
