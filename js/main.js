@@ -297,8 +297,9 @@
                     var tcs = extractAllTCs(cols[tcIdx]);
                     if (tcs.length) {
                         var f = [];
-                        for (var c2 = tcIdx + 1; c2 < cols.length; c2++) { if (cols[c2].trim()) { f.push(cols[c2].trim()); } }
-                        records.push({ tcs: tcs, fields: f });
+                        // 該当・修正の2列だけ拾う（末尾の分類列は無視）
+                        for (var c2 = tcIdx + 1; c2 < cols.length && f.length < 2; c2++) { if (cols[c2].trim()) { f.push(cols[c2].trim()); } }
+                        records.push({ tcs: tcs, fields: f, struct: true });
                         cur = null;
                         continue;
                     }
@@ -323,7 +324,7 @@
                     var f2 = (arrow.length >= 2)
                         ? [arrow[0].trim(), arrow.slice(1).join(' ').trim()]
                         : [rest];
-                    records.push({ tcs: [itc], fields: f2 });
+                    records.push({ tcs: [itc], fields: f2, struct: true });
                     cur = null;
                     continue;
                 }
@@ -342,10 +343,15 @@
         for (var r = 0; r < records.length; r++) {
             var rec = records[r];
             var curText = '', fixText = '';
-            // fields[0]=該当/現在、fields[1]=修正案。以降（分類・番号など）は無視
-            if (rec.fields.length >= 2) { curText = rec.fields[0]; fixText = rec.fields[1]; }
+            if (rec.fields.length === 0) { errs.push((rec.tcs[0] || '?') + ': 本文なし（スキップ）'); continue; }
             else if (rec.fields.length === 1) { fixText = rec.fields[0]; }
-            else { errs.push((rec.tcs[0] || '?') + ': 本文なし（スキップ）'); continue; }
+            else if (rec.struct) {
+                // 表・矢印形式：該当=現在、修正=修正（1行ずつ）
+                curText = rec.fields[0]; fixText = rec.fields[1];
+            } else {
+                // 縦並び：TC間の内容を全部表示（fields[0]=現在、残り全部=修正で改行結合）
+                curText = rec.fields[0]; fixText = rec.fields.slice(1).join('\n');
+            }
 
             var comment = (curText ? '現在：' + curText + '\n' : '') + '修正：' + fixText;
             for (var ti = 0; ti < rec.tcs.length; ti++) {
